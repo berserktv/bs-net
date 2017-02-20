@@ -201,8 +201,8 @@ wifi_infrastructure_mode() {
 ################################################
 ### start section
 
-cmd="$1"
-iface="$2"
+iface="$1"
+cmd="$2"
 WPA_PID=/var/run/wpa_supplicant_$iface.pid
 WLAN_LOCK=/var/run/wlan-up-$iface.lock
 
@@ -218,9 +218,22 @@ fi
 create_lock "$WLAN_LOCK"
 
 
+if [ "$cmd" = "down" ]; then
+    if [ -f "$WPA_PID" ]; then wpa_supplicant_stop "$WPA_PID"; fi
+    delete_lock "$WLAN_LOCK"
+    exit 0
+fi
+
+if [ "$cmd" != "up" ]; then
+    logger -s -t wlan-up "unknown mode = $1"
+    delete_lock "$WLAN_LOCK"
+    exit 1
+fi
+
+
 
 test -d $WPA_DIR || mkdir -p $WPA_DIR
-logger -s -t wlan-up "Raising wifi network up $iface (script /etc/network/wlan-up)"
+logger -s -t wlan-up "Raising WiFi network, (script /etc/network/wlan-up $iface up)"
 # найден файл с идентификатором, возможно wpa-supplicant еще запущен
 if [ -f "$WPA_PID" ]; then 
     if wpa_supplicant_stop "$WPA_PID"; then  logger -s -t wlan-up "wpa-supplicant it is already running, stoping ..."; fi
