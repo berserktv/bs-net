@@ -1,0 +1,8 @@
+#!/bin/sh
+
+cmd=$1
+iface=$2
+# скрипт отвечает только за фоновый запуск логики Wifi
+# необходим для того, чтобы udev не прерывал скрипт по своему таймауту (30 сек)
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+/etc/network/wlan-up "$cmd" "$iface" &
