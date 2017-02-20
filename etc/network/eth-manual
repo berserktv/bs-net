@@ -1,0 +1,37 @@
+#!/bin/sh
+
+eth_mode="dhcp"
+
+iface="$1"
+command="$2"
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+if [ "$command" != "up" ] && [ "$command" != "down" ]; then 
+    echo "Error launching script, the wrong command (/etc/network/eth-manual $iface $command), exit ..."
+    exit 1
+fi
+
+if [ "$command" = "down" ]; then
+    ifconfig $iface down    
+    exit 0
+fi
+
+
+###################################
+# command = up
+
+# Manual config for Raspberry Pi for built-in network interface
+if [ "$iface" = "eth0" ]; then
+    if [ "$eth_mode" = "dhcp" ]; then
+        ifconfig $iface up
+        /sbin/dhclient -lf /var/run/dhclient.$iface.leases $iface
+    else
+        ifconfig $iface "$eth_mode"
+    fi
+else
+    echo "Error launching script, the wrong interface (/etc/network/eth-manual $iface $command), exit ..."
+    exit 2
+fi
+
+exit 0
+
