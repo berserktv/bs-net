@@ -4,6 +4,7 @@ eth_mode="dhcp"
 
 iface="$1"
 command="$2"
+dh_leases="/var/run/dhclient.$iface.leases"
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 if [ "$command" != "up" ] && [ "$command" != "down" ]; then 
@@ -24,7 +25,8 @@ fi
 if [ "$iface" = "eth0" ]; then
     if [ "$eth_mode" = "dhcp" ]; then
         ifconfig $iface up
-        /sbin/dhclient -lf /var/run/dhclient.$iface.leases $iface
+        test -f $dh_leases || rm -f $dh_leases
+        /sbin/dhclient -lf $dh_leases $iface
     else
         ifconfig $iface "$eth_mode"
     fi

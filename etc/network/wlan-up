@@ -1,43 +1,45 @@
 #!/bin/sh
 
-# скрипт для запуска WLAN (беспроводной локальной сети)
+# скрипт для запуска WLAN (беспроводной локальной сети), autor Alexander Demachev, (site project: https://berserk.tv)
 #
 # WLAN работает по следующей логике:
-# 1) При подключение (отключении) Wifi адаптера срабатывает правило udev описанное в /etc/udev/rules.d/80-wifi-start.rules
+# 1) При подключение (отключении) WiFi адаптера срабатывает правило udev описанное в /etc/udev/rules.d/80-wifi-start.rules
 # 2) Далее правило udev передает управление этому скрипту через /etc/network/wlan-runner
 #    2.1. при успешном поднятии сетевого беспроводного интерфейса проиходит поиск сетей из внутреннего списка к которым возможно подключиться
-#    2.2. подключение производиться к первой успешно опознанной собственной сети в обычном режиме Wifi адаптера (инфраструктурный режим)
-#         т.е. подключение производиться к Wifi роутеру
-#    2.3. Wifi адаптер получает динамические параметры сети
+#    2.2. подключение производиться к первой успешно опознанной собственной сети в обычном режиме WiFi адаптера (инфраструктурный режим)
+#         т.е. подключение производиться к WiFi роутеру
+#    2.3. WiFi адаптер получает динамические параметры сети
 #
 
+WLAN_CONFIGS="/home/root/files/wlans"
 TMPSCAN=/tmp/iwlist.scan
 WPA_DIR=/var/run/wpa_supplicant
-WLAN_UP_LOCK=""
-WPA_CONFIG=$WPA_DIR/wpa_supplicant.conf
+WPA_REG="RU"
 WPA_DEBUG=""
 #WPA_DEBUG="-ddd"
 
+# ps from BusyBox or normal
+PS="/bin/ps"
+#PS="/bin/ps aux"
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-MAX_NET=1
-get_wifi_trusted_net() {
-    # функция отвечает за хранение списка доверенных wifi сетей (имитация массива, так как в sh они отсутствуют, индекс задается с нуля)
-    local num_net="$1"
-    if [ "$num_net" -lt "$MAX_NET"  ]; then
-        if [ "$num_net" -eq 0 ]; then WIFI_TRUSTED_SSID="testnet";  WIFI_TRUSTED_WPA_PSK=""; return 0;  fi
-        echo "Not specified correctly MAX_NET=$MAX_NET"
-        return 1;
-    fi
-    echo "You specify the index does not exist in the list of trusted Wifi networks"; 
-    return 2; 
-}
 
 
 ################################################
 ### function section
 
 create_lock() {
-    touch "$1"
+    local wlan_lock="$1"
+    local iface="$2"
+    if [ -f "$wlan_lock" ]; then
+        if $PS | grep -v "grep" | grep -q "/etc/network/wlan-up $iface up"; then
+            return 1
+        else
+            # lock файл присутствует, но нет запущенного процесса, видимо где-то зависли или завершились по таймауту в udev
+            delete_lock "$wlan_lock"
+        fi
+   fi
+   touch "$wlan_lock"
+   return 0
 }
 
 delete_lock() {
@@ -67,21 +69,78 @@ wpa_supplicant_stop() {
     return 1
 }
 
+find_pid() {
+    local args="$1"
+    #num_pid=$(pgrep -f "$dh_leases $iface" | tr "\n" " ")
+    # simple BusyBox
+    local num_pid=$($PS | grep -v "grep" | grep "$args" | tr "\n" " " | tr -s " " | cut -d" " -f2)
+    echo "$num_pid"
+}
+
+send_stop_task() {
+   local args="$1"
+   local num_pid=$(find_pid "$args")
+   if [ -n "$num_pid" ]; then
+       # SIGTERM
+       kill $num_pid
+       num_pid=$(find_pid "$args")
+       if [ -n "$num_pid" ]; then
+           # SIGINT
+           kill -2 $num_pid; sleep 1;
+           num_pid=$(find_pid "$args")
+           if [ -n "$num_pid" ]; then
+               # SIGHUP
+               kill -1 $num_pid;
+               logger -s -t wlan-up "SEND SIGHUP => kill -1 $num_pid";
+           fi
+       fi
+   fi
+}
+
+dhclient_start() {
+    local dh_leases="$1"
+    local iface="$2"
+    if ! $PS | grep -v "grep" | grep -q "$dh_leases $iface"; then
+        test -f $dh_leases && rm -f $dh_leases
+        /sbin/dhclient -lf $dh_leases $iface
+        if [ $? -eq 0 ]; then logger -s -t wlan-up "dhclient => OK"; return 0; fi
+    fi
+    return 1
+}
+
+dhclient_stop() {
+    local dh_leases="$1"
+    local iface="$2"
+    local num_pid=$(find_pid "$dh_leases")
+    if [ -n "$num_pid" ]; then
+        send_stop_task "$dh_leases"
+        test -f $dh_leases && rm -f $dh_leases
+        logger -s -t wlan-up "dhclient $dh_leases $iface => stop";
+        return 0
+    fi
+    return 1
+}
+
 find_wifi_trusted() {
-    local idx=0
+    local dircfg="$1"
+    local i=""
     ifconfig $iface up
     iwlist $iface scan > $TMPSCAN
-    # обход списка доверенных сетей
-    for idx in $( seq 0 $(($MAX_NET-1)) ); do
-        if ! get_wifi_trusted_net "$idx"; then continue; fi
-        if cat "$TMPSCAN" | grep "ESSID" | grep -q "$WIFI_TRUSTED_SSID"; then
-            # найдена доверенная сеть, пробуем подключиться
-            ### echo "############# FIND_OK #####################"
-            wifi_infrastructure_mode
-            return 0
+    # обход списка сохраненных доверенных сетей, в названии и каталога(ов) и файла допускаются пробелы
+    # конфигурационный файл с настройками в формате "wpa_passphrase ssid password"
+    for cfg in "${dircfg}"/*; do
+        if [ -f "${cfg}" ]; then
+            i=$(basename "${cfg}")
+            if cat "$TMPSCAN" | grep "ESSID" | grep -q "$i"; then
+                # найдена доверенная сеть, пробуем подключиться
+                #echo "############# FIND_OK #####################"
+                if wifi_infrastructure_mode "$cfg"; then return 0;
+                else return 1; fi
+            fi
         fi
     done
-    return 1
+    if [ -z $i ]; then return 2; fi
+    return 3
 }
 
 wait_running() {
@@ -110,15 +169,25 @@ wait_running() {
 
 wait_start_wifi_infrastructure_mode() {
     local res=0
+    local code=0
+    local count=0
     local timeout="$1"
-    logger -s -t wlan-up "Wifi interface=$iface starting in infrastructure mode ..."
+
+    local max_find_cfg=2
+    logger -s -t wlan-up "WiFi interface=$iface starting in infrastructure mode ..."
     
     local START=$(date +%s)
     while true; do
         local last=$(date +%s)
-        if find_wifi_trusted; then
-            echo "Find Wifi trusted on $(( $(date +%s) - $START )) seconds"
+        find_wifi_trusted "${WLAN_CONFIGS}"
+        code=$?
+        if [ $code -eq 0 ]; then
+            echo "Find WiFi trusted on $(( $(date +%s) - $START )) seconds"
             break;
+        elif [ $code -eq 2 ]; then
+            count=$((count+1))
+            echo "===>  No saved configs WiFi found"
+            if [ $count -eq $max_find_cfg ]; then echo "No saved configs WiFi found"; res=2; break; fi
         fi
         
         # время работы функции сканирования wifi занимает достаточно продолжительное время, поэтому sleep не нужен
@@ -139,61 +208,30 @@ wait_start_wifi_infrastructure_mode() {
 }
 
 
-TMP_wpa_supplicant_config() {
-    cat > $WPA_CONFIG << EOF
-ctrl_interface=$WPA_DIR
-#ap_scan=1
-#eapol_version=1
-#fast_reauth=1
-
-network={
-    ssid=""
-    #psk=""
-    #scan_ssid=1
-    #auth_alg=OPEN
-    psk=
-    key_mgmt=WPA-PSK
-    proto=WPA RSN
-    pairwise=CCMP TKIP
-    group=CCMP TKIP WEP104 WEP40
-    priority=2
-}
-    
-EOF
-}
-
 wifi_infrastructure_mode() {
+    local cfg="$1"
     ifconfig $iface down
-    iw reg set RU
+    iw reg set $WPA_REG
     iwconfig $iface mode managed
     ifconfig $iface up
     iwconfig $iface txpower 20
     
-    ###TMP_wpa_supplicant_config
-    wpa_passphrase "$WIFI_TRUSTED_SSID" "$WIFI_TRUSTED_WPA_PSK" > $WPA_CONFIG
     # -i указание сетевого интерфейса
     # -c путь к конфигурационному файлу
     # -P путь к файлу с идентификатором процесса
     # -D указание используемого драйвера
     # -B запускать в фоновом режиме
     # -d выводить отладочную информацию
-    wpa_supplicant -i $iface -c $WPA_CONFIG -P $WPA_PID -Dnl80211 $WPA_DEBUG -B
+    wpa_supplicant -i $iface -c $cfg -P $WPA_PID -Dnl80211 $WPA_DEBUG -B
+    #wpa_supplicant -i $iface -c $cfg -P $WPA_PID -Dnl80211 $WPA_DEBUG
     code=$?
     if [ $code -eq 0 ]; then 
-        wait_running "10"
+        wait_running "12"
         code=$?
     fi
+    # ошибка поднятия интерфейса (интерфейс не готов, ошибка авторизации и т.п.)
+    if [ $code -ne 0 ]; then wpa_supplicant_stop "$WPA_PID"; fi
     return $code
-    
-    # iface wlan0 inet dhcp  # где wlan0 - название вашего беспроводного адаптера в iwconfig
-    # wpa-driver nl80211     # общий драйвер для вай-фай
-    # wpa-ssid 404           # имя точки доступа
-    # wpa-ap-scan 1          # 1 - essid вещается всем, 2 - скрыт
-    # wpa-proto RSN          # RSN=wpa2, WPA=wpa1
-    # wpa-pairwise CCMP      # ccmp- aes шифрователь(для wpa2). tkip -tkip(для wpa1)
-    # wpa-group CCMP
-    # wpa-key-mgmt WPA-PSK   # WPA-PSK - подключение через ключевую фразу.
-    # wpa-psk <hex_ключ>     # вставляем ранее полученный hex-ключ сети
 }
 
 
@@ -202,48 +240,44 @@ wifi_infrastructure_mode() {
 
 iface="$1"
 cmd="$2"
+dh_leases="/var/run/dhclient.$iface.leases"
+
 WPA_PID=/var/run/wpa_supplicant_$iface.pid
 WLAN_LOCK=/var/run/wlan-up-$iface.lock
 
-if [ -f "$WLAN_LOCK" ]; then 
-    if ps | grep -v "grep" | grep -q "/etc/network/wlan-up"; then 
-        logger -s -t wlan-up "find lock file, exit ... (script /etc/network/wlan-up)"
-        exit 1
-    else 
-        # lock файл присутствует, но нет запущенного процесса, видимо где-то зависли или завершились по таймауту в udev
-        delete_lock "$WLAN_LOCK"
-    fi
+create_lock "$WLAN_LOCK" "$iface"
+if [ $? -eq 1 ]; then
+    logger -s -t wlan-up "find lock file, exit ... (script /etc/network/wlan-up)"
+    exit 1
 fi
-create_lock "$WLAN_LOCK"
 
 
 if [ "$cmd" = "down" ]; then
     if [ -f "$WPA_PID" ]; then wpa_supplicant_stop "$WPA_PID"; fi
     delete_lock "$WLAN_LOCK"
+    dhclient_stop "$dh_leases" "$iface"
+    ifconfig $iface down
     exit 0
 fi
 
 if [ "$cmd" != "up" ]; then
     logger -s -t wlan-up "unknown mode = $1"
     delete_lock "$WLAN_LOCK"
-    exit 1
+    exit 2
 fi
 
 
 
 test -d $WPA_DIR || mkdir -p $WPA_DIR
 logger -s -t wlan-up "Raising WiFi network, (script /etc/network/wlan-up $iface up)"
-# найден файл с идентификатором, возможно wpa-supplicant еще запущен
 if [ -f "$WPA_PID" ]; then 
     if wpa_supplicant_stop "$WPA_PID"; then  logger -s -t wlan-up "wpa-supplicant it is already running, stoping ..."; fi
 fi
 
 
 if wait_start_wifi_infrastructure_mode "30"; then
-    if dhclient $iface; then
-        logger -s -t wlan-up "dhclient => OK"
-    fi
-fi    
+    dhclient_start "$dh_leases" "$iface"
+fi
     
     
 delete_lock "$WLAN_LOCK"
