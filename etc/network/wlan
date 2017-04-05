@@ -1,7 +1,6 @@
 #!/bin/sh
 
 # скрипт для запуска WLAN (беспроводной локальной сети), autor Alexander Demachev, (site project: https://berserk.tv)
-#
 # WLAN работает по следующей логике:
 # 1) При подключение (отключении) WiFi адаптера срабатывает правило udev описанное в /etc/udev/rules.d/80-wifi-start.rules
 # 2) Далее правило udev передает управление этому скрипту через /etc/network/wlan-runner
@@ -31,7 +30,7 @@ create_lock() {
     local wlan_lock="$1"
     local iface="$2"
     if [ -f "$wlan_lock" ]; then
-        if $PS | grep -v "grep" | grep -q "/etc/network/wlan-up $iface up"; then
+        if $PS | grep -v "grep" | grep -q "/etc/network/wlan $iface up"; then
             return 1
         else
             # lock файл присутствует, но нет запущенного процесса, видимо где-то зависли или завершились по таймауту в udev
@@ -91,7 +90,7 @@ send_stop_task() {
            if [ -n "$num_pid" ]; then
                # SIGHUP
                kill -1 $num_pid;
-               logger -s -t wlan-up "SEND SIGHUP => kill -1 $num_pid";
+               logger -s -t wlan "SEND SIGHUP => kill -1 $num_pid";
            fi
        fi
    fi
@@ -103,7 +102,7 @@ dhclient_start() {
     if ! $PS | grep -v "grep" | grep -q "$dh_leases $iface"; then
         test -f $dh_leases && rm -f $dh_leases
         /sbin/dhclient -lf $dh_leases $iface
-        if [ $? -eq 0 ]; then logger -s -t wlan-up "dhclient => OK"; return 0; fi
+        if [ $? -eq 0 ]; then logger -s -t wlan "dhclient => OK"; return 0; fi
     fi
     return 1
 }
@@ -115,7 +114,7 @@ dhclient_stop() {
     if [ -n "$num_pid" ]; then
         send_stop_task "$dh_leases"
         test -f $dh_leases && rm -f $dh_leases
-        logger -s -t wlan-up "dhclient $dh_leases $iface => stop";
+        logger -s -t wlan "dhclient $dh_leases $iface => stop";
         return 0
     fi
     return 1
@@ -146,12 +145,12 @@ find_wifi_trusted() {
 wait_running() {
     local res=0
     local timeout="$1"
-    logger -s -t wlan-up "wait $iface RUNNING"
+    logger -s -t wlan "wait $iface RUNNING"
     
     local START=$(date +%s)
     while true; do
         if ifconfig $iface | grep -q "RUNNING"; then
-            logger -s -t wlan-up "SUCCESS => $iface RUNNING"
+            logger -s -t wlan "SUCCESS => $iface RUNNING"
             return $res;
         fi
         
@@ -174,7 +173,7 @@ wait_start_wifi_infrastructure_mode() {
     local timeout="$1"
 
     local max_find_cfg=2
-    logger -s -t wlan-up "WiFi interface=$iface starting in infrastructure mode ..."
+    logger -s -t wlan "WiFi interface=$iface starting in infrastructure mode ..."
     
     local START=$(date +%s)
     while true; do
@@ -243,25 +242,25 @@ cmd="$2"
 dh_leases="/var/run/dhclient.$iface.leases"
 
 WPA_PID=/var/run/wpa_supplicant_$iface.pid
-WLAN_LOCK=/var/run/wlan-up-$iface.lock
+WLAN_LOCK=/var/run/wlan-$iface.lock
 
 create_lock "$WLAN_LOCK" "$iface"
 if [ $? -eq 1 ]; then
-    logger -s -t wlan-up "find lock file, exit ... (script /etc/network/wlan-up)"
+    logger -s -t wlan "find lock file, exit ... (script /etc/network/wlan)"
     exit 1
 fi
 
 
 if [ "$cmd" = "down" ]; then
     if [ -f "$WPA_PID" ]; then wpa_supplicant_stop "$WPA_PID"; fi
-    delete_lock "$WLAN_LOCK"
     dhclient_stop "$dh_leases" "$iface"
     ifconfig $iface down
+    delete_lock "$WLAN_LOCK"
     exit 0
 fi
 
 if [ "$cmd" != "up" ]; then
-    logger -s -t wlan-up "unknown mode = $1"
+    logger -s -t wlan "unknown mode = $1"
     delete_lock "$WLAN_LOCK"
     exit 2
 fi
@@ -269,20 +268,21 @@ fi
 
 
 test -d $WPA_DIR || mkdir -p $WPA_DIR
-logger -s -t wlan-up "Raising WiFi network, (script /etc/network/wlan-up $iface up)"
+logger -s -t wlan "Raising WiFi network, (script /etc/network/wlan $iface up)"
 if [ -f "$WPA_PID" ]; then 
-    if wpa_supplicant_stop "$WPA_PID"; then  logger -s -t wlan-up "wpa-supplicant it is already running, stoping ..."; fi
+    if wpa_supplicant_stop "$WPA_PID"; then  logger -s -t wlan "wpa-supplicant it is already running, stoping ..."; fi
 fi
 
 
 if wait_start_wifi_infrastructure_mode "30"; then
     dhclient_start "$dh_leases" "$iface"
+    delete_lock "$WLAN_LOCK"
+    exit 0
+else
+    delete_lock "$WLAN_LOCK"
+    exit 3
 fi
     
-    
-delete_lock "$WLAN_LOCK"
-exit 0
-
 
 
 
