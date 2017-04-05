@@ -25,7 +25,7 @@ fi
 if [ "$iface" = "eth0" ]; then
     if [ "$eth_mode" = "dhcp" ]; then
         ifconfig $iface up
-        test -f $dh_leases || rm -f $dh_leases
+        test -f $dh_leases && rm -f $dh_leases
         /sbin/dhclient -lf $dh_leases $iface
     else
         ifconfig $iface "$eth_mode"
