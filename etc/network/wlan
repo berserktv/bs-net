@@ -10,7 +10,7 @@
 #    2.3. WiFi адаптер получает динамические параметры сети
 #
 
-WLAN_CONFIGS="/home/root/files/wlans"
+WLAN_CONFIGS="/home/root/.kodi/userdata/wlans/"
 TMPSCAN=/tmp/iwlist.scan
 WPA_DIR=/var/run/wpa_supplicant
 WPA_REG="RU"
