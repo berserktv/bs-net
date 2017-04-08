@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# скрипт для запуска WLAN (беспроводной локальной сети), autor Alexander Demachev, (site project: https://berserk.tv)
+# скрипт для запуска WLAN (беспроводной локальной сети), autor: Alexander Demachev, project: "Berserk",  site: https://berserk.tv
 # WLAN работает по следующей логике:
 # 1) При подключение (отключении) WiFi адаптера срабатывает правило udev описанное в /etc/udev/rules.d/80-wifi-start.rules
 # 2) Далее правило udev передает управление этому скрипту через /etc/network/wlan-runner
@@ -8,6 +8,8 @@
 #    2.2. подключение производиться к первой успешно опознанной собственной сети в обычном режиме WiFi адаптера (инфраструктурный режим)
 #         т.е. подключение производиться к WiFi роутеру
 #    2.3. WiFi адаптер получает динамические параметры сети
+#
+# license -  The MIT License (MIT)
 #
 
 WLAN_CONFIGS="/home/root/.kodi/userdata/wlans/"

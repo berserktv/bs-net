@@ -2,13 +2,14 @@
 
 # скрипт предназначен для сканирования ближайших WiFi сетей утилитой "iw" 
 # и генерацию хеша паролей, командой wpa_passphrase
-# autor "Alexander Demachev", project: berserk (site: https://berserk.tv)
-# license -  The MIT License (MIT)
+# autor: "Alexander Demachev", project: "Berserk", site: https://berserk.tv
 # примечание: имена WiFi сетей в которых есть пробелы, не поддерживаются
 # так как такие имена вносят большее количество неодназначности
 # (например пробел в конце имени сети)
-WLAN_SCAN="/tmp/wifi.scan"
+#
+# license -  The MIT License (MIT)
 
+WLAN_SCAN="/tmp/wifi.scan"
 
 scan_wifi() {
     local wlan="$1"
