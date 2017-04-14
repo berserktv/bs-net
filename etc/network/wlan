@@ -70,58 +70,6 @@ wpa_supplicant_stop() {
     return 1
 }
 
-find_pid() {
-    local args="$1"
-    #num_pid=$(pgrep -f "$dh_leases $iface" | tr "\n" " ")
-    # simple BusyBox
-    local num_pid=$($PS | grep -v "grep" | grep "$args" | tr "\n" " " | tr -s " " | cut -d" " -f2)
-    echo "$num_pid"
-}
-
-send_stop_task() {
-   local args="$1"
-   local num_pid=$(find_pid "$args")
-   if [ -n "$num_pid" ]; then
-       # SIGTERM
-       kill $num_pid
-       num_pid=$(find_pid "$args")
-       if [ -n "$num_pid" ]; then
-           # SIGINT
-           kill -2 $num_pid; sleep 1;
-           num_pid=$(find_pid "$args")
-           if [ -n "$num_pid" ]; then
-               # SIGHUP
-               kill -1 $num_pid;
-               logger -s -t wlan "SEND SIGHUP => kill -1 $num_pid";
-           fi
-       fi
-   fi
-}
-
-dhclient_start() {
-    local dh_leases="$1"
-    local iface="$2"
-    if ! $PS | grep -v "grep" | grep -q "$dh_leases $iface"; then
-        test -f $dh_leases && rm -f $dh_leases
-        /sbin/dhclient -lf $dh_leases $iface
-        if [ $? -eq 0 ]; then logger -s -t wlan "dhclient => OK"; return 0; fi
-    fi
-    return 1
-}
-
-dhclient_stop() {
-    local dh_leases="$1"
-    local iface="$2"
-    local num_pid=$(find_pid "$dh_leases")
-    if [ -n "$num_pid" ]; then
-        send_stop_task "$dh_leases"
-        test -f $dh_leases && rm -f $dh_leases
-        logger -s -t wlan "dhclient $dh_leases $iface => stop";
-        return 0
-    fi
-    return 1
-}
-
 find_wifi_trusted() {
     local dircfg="$1"
     local i=""
@@ -247,15 +195,14 @@ WPA_PID=/var/run/wpa_supplicant_$iface.pid
 WLAN_LOCK=/var/run/wlan-$iface.lock
 
 create_lock "$WLAN_LOCK" "$iface"
-if [ $? -eq 1 ]; then
-    logger -s -t wlan "find lock file, exit ... (script /etc/network/wlan)"
-    exit 1
-fi
+if [ $? -eq 1 ]; then logger -s -t wlan "find lock file, exit ... (script /etc/network/wlan)"; exit 1; fi
+if [ ! -e /etc/network/dh-func.sh ]; then logger -s -t wlan "not found /etc/network/dh-func.sh"; exit 4; fi
 
+. /etc/network/dh-func.sh
 
 if [ "$cmd" = "down" ]; then
     if [ -f "$WPA_PID" ]; then wpa_supplicant_stop "$WPA_PID"; fi
-    dhclient_stop "$dh_leases" "$iface"
+    dhclient_stop "$dh_leases" "$iface" "wlan"
     ifconfig $iface down
     delete_lock "$WLAN_LOCK"
     exit 0
@@ -277,15 +224,10 @@ fi
 
 
 if wait_start_wifi_infrastructure_mode "30"; then
-    dhclient_start "$dh_leases" "$iface"
+    dhclient_start "$dh_leases" "$iface" "wlan"
     delete_lock "$WLAN_LOCK"
     exit 0
 else
     delete_lock "$WLAN_LOCK"
     exit 3
 fi
-    
-
-
-
-
