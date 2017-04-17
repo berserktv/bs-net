@@ -190,8 +190,7 @@ dh_leases="/var/run/dhclient.$iface.leases"
 
 WPA_PID=/var/run/wpa_supplicant_$iface.pid
 WLAN_LOCK=/var/run/wlan-$iface.lock
-# WLAN not used
-if [ -f "$WLAN_CONFIGS/off" ]; then logger -s -t wlan "wlan OFF (find file $WLAN_CONFIGS/off)"; exit 5; fi
+if [ "$cmd" != "up" ] && [ "$cmd" != "down" ]; then logger -s -t wlan "unknown command=$cmd"; exit 2; fi
 
 
 create_lock "$WLAN_LOCK" "$iface"
@@ -208,13 +207,11 @@ if [ "$cmd" = "down" ]; then
     exit 0
 fi
 
-if [ "$cmd" != "up" ]; then
-    logger -s -t wlan "unknown mode = $1"
-    delete_lock "$WLAN_LOCK"
-    exit 2
-fi
 
-
+###################################
+# command = up
+# WLAN not used
+if [ -f "$WLAN_CONFIGS/off" ]; then logger -s -t wlan "wlan OFF (find file $WLAN_CONFIGS/off)"; exit 5; fi
 
 test -d $WPA_DIR || mkdir -p $WPA_DIR
 logger -s -t wlan "Raising WiFi network, (script /etc/network/wlan $iface up)"

@@ -2,6 +2,11 @@
 
 # скрипт для настройки сетевого интерфейса ethernet в ручном (manual) режиме
 # autor: Alexander Demachev, project: "Berserk",  site: https://berserk.tv
+# пример возможного использования в /eth/network/interfaces:
+# auto eth0
+#     iface eth0 inet manual
+#     up /etc/network/eth-manual $IFACE up
+#     down /etc/network/eth-manual $IFACE down
 # license -  The MIT License (MIT)
 
 iface="$1"
@@ -11,8 +16,6 @@ ETH_CONFIGS="/home/root/.kodi/userdata/eths/"
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 if [ "$command" != "up" ] && [ "$command" != "down" ]; then logger -s -t eth-manual "unknown command=$command"; exit 1; fi
-# Ethernet not used
-if [ -f "$ETH_CONFIGS/off" ]; then logger -s -t eth-manual "$iface OFF"; exit 2; fi
 if [ ! -f "$ETH_CONFIGS/$iface" ]; then logger -s -t eth-manual "$iface not configure"; exit 3; fi
 if [ ! -e /etc/network/dh-func.sh ]; then logger -s -t eth-manual "not found /etc/network/dh-func.sh"; exit 4; fi
 
@@ -27,6 +30,9 @@ fi
 
 ###################################
 # command = up
+# Ethernet not used
+if [ -f "$ETH_CONFIGS/off" ]; then logger -s -t eth-manual "$iface OFF"; exit 2; fi
+
 . $ETH_CONFIGS/$iface
 if [ -z "$ETH_IP" ]; then logger -s -t eth-manual "$ETH_CONFIGS/$iface => not find ENV = ETH_IP"; exit 5; fi
 
@@ -35,7 +41,11 @@ if [ "$ETH_IP" = "dhcp" ]; then
 else
     if [ -z "$ETH_NETMASK" ]; then logger -s -t eth-manual "$ETH_CONFIGS/$iface => not find ENV = ETH_NETMASK"; exit 6; fi
     ifconfig $iface $ETH_IP netmask $ETH_NETMASK up
-    if [ $? -eq 0 ]; then create_resolv_conf "$ETH_CONFIGS/$iface" "$ETH_DNS1" "$ETH_DNS1" "eth-manual"; fi
+    if [ $? -eq 0 ]; then
+        create_resolv_conf "$ETH_CONFIGS/$iface" "$ETH_DNS1" "$ETH_DNS1" "eth-manual";
+        if [ -z "$ETH_GATEWAY" ]; then logger -s -t eth-manual "$ETH_CONFIGS/$iface => not find ENV = ETH_GATEWAY"; exit 0; fi
+        route add default gw ${ETH_GATEWAY}
+    fi
 fi
 
 
