@@ -8,9 +8,7 @@
 #    2.2. подключение производиться к первой успешно опознанной собственной сети в обычном режиме WiFi адаптера (инфраструктурный режим)
 #         т.е. подключение производиться к WiFi роутеру
 #    2.3. WiFi адаптер получает динамические параметры сети
-#
 # license -  The MIT License (MIT)
-#
 
 WLAN_CONFIGS="/home/root/.kodi/userdata/wlans/"
 TMPSCAN=/tmp/iwlist.scan
@@ -186,13 +184,15 @@ wifi_infrastructure_mode() {
 
 ################################################
 ### start section
-
 iface="$1"
 cmd="$2"
 dh_leases="/var/run/dhclient.$iface.leases"
 
 WPA_PID=/var/run/wpa_supplicant_$iface.pid
 WLAN_LOCK=/var/run/wlan-$iface.lock
+# WLAN not used
+if [ -f "$WLAN_CONFIGS/off" ]; then logger -s -t wlan "wlan OFF (find file $WLAN_CONFIGS/off)"; exit 5; fi
+
 
 create_lock "$WLAN_LOCK" "$iface"
 if [ $? -eq 1 ]; then logger -s -t wlan "find lock file, exit ... (script /etc/network/wlan)"; exit 1; fi

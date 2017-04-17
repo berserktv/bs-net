@@ -1,0 +1,5 @@
+ETH_IP=dhcp
+ETH_NETMASK=""
+ETH_GATEWAY=""
+ETH_DNS1=""
+ETH_DNS2=""
