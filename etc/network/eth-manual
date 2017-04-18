@@ -42,7 +42,7 @@ else
     if [ -z "$ETH_NETMASK" ]; then logger -s -t eth-manual "$ETH_CONFIGS/$iface => not find ENV = ETH_NETMASK"; exit 6; fi
     ifconfig $iface $ETH_IP netmask $ETH_NETMASK up
     if [ $? -eq 0 ]; then
-        create_resolv_conf "$ETH_CONFIGS/$iface" "$ETH_DNS1" "$ETH_DNS1" "eth-manual";
+        create_resolv_conf "$ETH_CONFIGS/$iface" "$ETH_DNS1" "$ETH_DNS2" "eth-manual";
         if [ -z "$ETH_GATEWAY" ]; then logger -s -t eth-manual "$ETH_CONFIGS/$iface => not find ENV = ETH_GATEWAY"; exit 0; fi
         route add default gw ${ETH_GATEWAY}
     fi

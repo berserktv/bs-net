@@ -195,7 +195,7 @@ if [ "$cmd" != "up" ] && [ "$cmd" != "down" ]; then logger -s -t wlan "unknown c
 
 create_lock "$WLAN_LOCK" "$iface"
 if [ $? -eq 1 ]; then logger -s -t wlan "find lock file, exit ... (script /etc/network/wlan)"; exit 1; fi
-if [ ! -e /etc/network/dh-func.sh ]; then logger -s -t wlan "not found /etc/network/dh-func.sh"; exit 4; fi
+if [ ! -e /etc/network/dh-func.sh ]; then delete_lock "$WLAN_LOCK"; logger -s -t wlan "not found /etc/network/dh-func.sh"; exit 4; fi
 
 . /etc/network/dh-func.sh
 
@@ -211,7 +211,8 @@ fi
 ###################################
 # command = up
 # WLAN not used
-if [ -f "$WLAN_CONFIGS/off" ]; then logger -s -t wlan "wlan OFF (find file $WLAN_CONFIGS/off)"; exit 5; fi
+if [ -f "$WLAN_CONFIGS/off" ]; then delete_lock "$WLAN_LOCK"; logger -s -t wlan "wlan OFF (find file $WLAN_CONFIGS/off)"; exit 5; fi
+
 
 test -d $WPA_DIR || mkdir -p $WPA_DIR
 logger -s -t wlan "Raising WiFi network, (script /etc/network/wlan $iface up)"
