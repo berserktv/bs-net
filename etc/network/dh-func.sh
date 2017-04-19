@@ -34,7 +34,8 @@ dhclient_start() {
     local dh_leases="$1"
     local iface="$2"
     local logmark="$3"
-    if ! $PS | grep -v "grep" | grep -q "$dh_leases $iface"; then
+    #if ! $PS | grep -v "grep" | grep -q "$dh_leases $iface"; then
+    if ! $PS | grep -v "grep" | grep -q "$dh_leases"; then
         test -f $dh_leases && rm -f $dh_leases
         logger -s -t $logmark "dhclient wait answer ..."
         /sbin/dhclient -lf $dh_leases $iface

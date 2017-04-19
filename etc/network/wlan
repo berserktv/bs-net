@@ -10,7 +10,7 @@
 #    2.3. WiFi адаптер получает динамические параметры сети
 # license -  The MIT License (MIT)
 
-WLAN_CONFIGS="/home/root/.kodi/userdata/wlans/"
+WLAN_CONFIGS="/home/root/.kodi/userdata/wlans"
 TMPSCAN=/tmp/iwlist.scan
 WPA_DIR=/var/run/wpa_supplicant
 WPA_REG="RU"
@@ -129,12 +129,16 @@ wait_start_wifi_infrastructure_mode() {
         find_wifi_trusted "${WLAN_CONFIGS}"
         code=$?
         if [ $code -eq 0 ]; then
-            echo "Find WiFi trusted on $(( $(date +%s) - $START )) seconds"
+            mess="Find WiFi trusted on $(( $(date +%s) - $START )) seconds"
+            echo "$mess";
+            logger -s -t wlan "$mess"
             break;
         elif [ $code -eq 2 ]; then
             count=$((count+1))
-            echo "===>  No saved configs WiFi found"
-            if [ $count -eq $max_find_cfg ]; then echo "No saved configs WiFi found"; res=2; break; fi
+            mess="===>  No saved configs WiFi found"
+            echo "$mess"
+            logger -s -t wlan "$mess"
+            if [ $count -eq $max_find_cfg ]; then echo "$mess"; res=2; break; fi
         fi
         
         # время работы функции сканирования wifi занимает достаточно продолжительное время, поэтому sleep не нужен
@@ -195,7 +199,7 @@ if [ "$cmd" != "up" ] && [ "$cmd" != "down" ]; then logger -s -t wlan "unknown c
 
 create_lock "$WLAN_LOCK" "$iface"
 if [ $? -eq 1 ]; then logger -s -t wlan "find lock file, exit ... (script /etc/network/wlan)"; exit 1; fi
-if [ ! -e /etc/network/dh-func.sh ]; then delete_lock "$WLAN_LOCK"; logger -s -t wlan "not found /etc/network/dh-func.sh"; exit 4; fi
+if [ ! -e /etc/network/dh-func.sh ]; then logger -s -t wlan "not found /etc/network/dh-func.sh"; delete_lock "$WLAN_LOCK"; exit 4; fi
 
 . /etc/network/dh-func.sh
 
@@ -211,7 +215,7 @@ fi
 ###################################
 # command = up
 # WLAN not used
-if [ -f "$WLAN_CONFIGS/off" ]; then delete_lock "$WLAN_LOCK"; logger -s -t wlan "wlan OFF (find file $WLAN_CONFIGS/off)"; exit 5; fi
+if [ -f "$WLAN_CONFIGS/off" ]; then logger -s -t wlan "wlan OFF (find file $WLAN_CONFIGS/off)"; delete_lock "$WLAN_LOCK"; exit 5; fi
 
 
 test -d $WPA_DIR || mkdir -p $WPA_DIR

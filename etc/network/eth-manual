@@ -12,7 +12,7 @@
 iface="$1"
 command="$2"
 dh_leases="/var/run/dhclient.$iface.leases"
-ETH_CONFIGS="/home/root/.kodi/userdata/eths/"
+ETH_CONFIGS="/home/root/.kodi/userdata/eths"
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 if [ "$command" != "up" ] && [ "$command" != "down" ]; then logger -s -t eth-manual "unknown command=$command"; exit 1; fi
