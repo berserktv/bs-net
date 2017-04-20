@@ -11,6 +11,12 @@
 
 WLAN_SCAN="/tmp/wifi.scan"
 
+check_pluged() {
+    local iface="$1"
+    if ifconfig $iface | grep -q "RUNNING"; then return 0
+    else return 1; fi
+}
+
 scan_wifi() {
     local wlan="$1"
     iw $wlan scan > $WLAN_SCAN
@@ -68,7 +74,6 @@ END {
 
 
 
-
 # arg1 - wlan interface
 # arg2 - command
 iface="$1"
@@ -77,6 +82,10 @@ code=0
 
 if [ "$cmd" = "scan" ]; then
     scan_wifi "$1"
+    code=$?
+
+elif [ "$cmd" = "check_pluged" ]; then
+    check_pluged "$iface"
     code=$?
 
 elif [ "$cmd" = "gen" ]; then

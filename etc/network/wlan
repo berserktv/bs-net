@@ -206,7 +206,7 @@ if [ ! -e /etc/network/dh-func.sh ]; then logger -s -t wlan "not found /etc/netw
 if [ "$cmd" = "down" ]; then
     if [ -f "$WPA_PID" ]; then wpa_supplicant_stop "$WPA_PID"; fi
     dhclient_stop "$dh_leases" "$iface" "wlan"
-    ifconfig $iface down
+    ifconfig_down_ip "$iface"
     delete_lock "$WLAN_LOCK"
     exit 0
 fi

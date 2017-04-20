@@ -14,6 +14,13 @@ find_pid() {
     echo "$num_pid"
 }
 
+ifconfig_down_ip() {
+    local iface="$1"
+    local ip=$(ifconfig $iface | grep "inet addr:" | cut -d":" -f2 | cut -d" " -f1)
+    if [ -n "$ip" ]; then ifconfig $iface del $ip down
+    else ifconfig $iface down; fi
+}
+
 send_stop_task() {
    local args="$1"
    local logmark="$2"
