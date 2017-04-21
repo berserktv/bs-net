@@ -24,7 +24,7 @@ if [ ! -e /etc/network/dh-func.sh ]; then logger -s -t eth-manual "not found /et
 
 if [ "$command" = "down" ]; then
     dhclient_stop "$dh_leases" "$iface" "eth-manual"
-    ifconfig_down_ip "$iface"
+    ifconfig "$iface" down
     exit 0
 fi
 
