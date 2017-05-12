@@ -15,6 +15,7 @@ TMPSCAN=/tmp/iwlist.scan
 WPA_DIR=/var/run/wpa_supplicant
 WPA_REG="RU"
 WPA_DEBUG=""
+# for debug set environment WPA_DEBUG="-ddd" and unset param "-B" for wpa_supplicant
 #WPA_DEBUG="-ddd"
 
 # ps from BusyBox or normal
@@ -227,6 +228,7 @@ fi
 
 if wait_start_wifi_infrastructure_mode "30"; then
     dhclient_start "$dh_leases" "$iface" "wlan"
+    #ntpdate pool.ntp.org &
     delete_lock "$WLAN_LOCK"
     exit 0
 else
