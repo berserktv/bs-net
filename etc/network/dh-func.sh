@@ -65,6 +65,21 @@ dhclient_stop() {
     return 1
 }
 
+ntp_stop() {
+    local logmark="$1"
+    /etc/init.d/ntpd stop
+    logger -s -t $logmark "ntp_stop"
+}
+
+ntp_start() {
+    local logmark="$1"
+    /etc/init.d/ntpd stop
+    logger -s -t $logmark "/usr/bin/ntpdate pool.ntp.org"
+    /usr/bin/ntpdate pool.ntp.org
+    /etc/init.d/ntpd start
+    logger -s -t $logmark "ntp_start"
+}
+
 create_resolv_conf() {
     local conf="$1"
     local dns1="$2"

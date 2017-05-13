@@ -207,6 +207,7 @@ if [ ! -e /etc/network/dh-func.sh ]; then logger -s -t wlan "not found /etc/netw
 if [ "$cmd" = "down" ]; then
     if [ -f "$WPA_PID" ]; then wpa_supplicant_stop "$WPA_PID"; fi
     dhclient_stop "$dh_leases" "$iface" "wlan"
+    ntp_stop "wlan"
     ifconfig "$iface" down
     delete_lock "$WLAN_LOCK"
     exit 0
@@ -228,7 +229,7 @@ fi
 
 if wait_start_wifi_infrastructure_mode "30"; then
     dhclient_start "$dh_leases" "$iface" "wlan"
-    #ntpdate pool.ntp.org &
+    ntp_start "wlan"
     delete_lock "$WLAN_LOCK"
     exit 0
 else

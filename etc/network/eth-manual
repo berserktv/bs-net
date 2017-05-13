@@ -24,6 +24,7 @@ if [ ! -e /etc/network/dh-func.sh ]; then logger -s -t eth-manual "not found /et
 
 if [ "$command" = "down" ]; then
     dhclient_stop "$dh_leases" "$iface" "eth-manual"
+    ntp_stop "eth-manual"
     ifconfig "$iface" down
     exit 0
 fi
@@ -38,7 +39,7 @@ if [ -z "$ETH_IP" ]; then logger -s -t eth-manual "$ETH_CONFIGS/$iface => not fi
 
 if [ "$ETH_IP" = "dhcp" ]; then
     dhclient_start "$dh_leases" "$iface" "eth-manual"
-    #ntpdate pool.ntp.org &
+    ntp_start "eth-manual"
 else
     if [ -z "$ETH_NETMASK" ]; then logger -s -t eth-manual "$ETH_CONFIGS/$iface => not find ENV = ETH_NETMASK"; exit 6; fi
     ifconfig $iface $ETH_IP netmask $ETH_NETMASK up
@@ -47,7 +48,7 @@ else
         if [ -z "$ETH_GATEWAY" ]; then logger -s -t eth-manual "$ETH_CONFIGS/$iface => not find ENV = ETH_GATEWAY"; exit 0; fi
         route add default gw ${ETH_GATEWAY}
     fi
-    #ntpdate pool.ntp.org &
+    ntp_start "eth-manual"
 fi
 
 
