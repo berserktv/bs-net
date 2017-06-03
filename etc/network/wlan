@@ -87,7 +87,7 @@ find_wifi_trusted() {
             fi
         fi
     done
-    if [ -z $i ]; then return 2; fi
+    if [ -z "$i" ]; then return 2; fi
     return 3
 }
 
@@ -174,8 +174,8 @@ wifi_infrastructure_mode() {
     # -D указание используемого драйвера
     # -B запускать в фоновом режиме
     # -d выводить отладочную информацию
-    wpa_supplicant -i $iface -c $cfg -P $WPA_PID -Dnl80211 $WPA_DEBUG -B
-    #wpa_supplicant -i $iface -c $cfg -P $WPA_PID -Dnl80211 $WPA_DEBUG
+    wpa_supplicant -i $iface -c "${cfg}" -P $WPA_PID -Dnl80211 $WPA_DEBUG -B
+    #wpa_supplicant -i $iface -c "${cfg}" -P $WPA_PID -Dnl80211 $WPA_DEBUG
     code=$?
     if [ $code -eq 0 ]; then 
         wait_running "12"
