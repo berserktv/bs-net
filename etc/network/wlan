@@ -216,8 +216,9 @@ fi
 
 ###################################
 # command = up
-# WLAN not used
+# WLAN not used or more WLAN, more ...
 if [ -f "$WLAN_CONFIGS/off" ]; then logger -s -t wlan "wlan OFF (find file $WLAN_CONFIGS/off)"; delete_lock "$WLAN_LOCK"; exit 5; fi
+if [ -f "$WLAN_CONFIGS/${iface}_off" ]; then logger -s -t wlan "wlan - ${iface} OFF (find file $WLAN_CONFIGS/${iface}_off)"; delete_lock "$WLAN_LOCK"; exit 5; fi
 
 
 test -d $WPA_DIR || mkdir -p $WPA_DIR

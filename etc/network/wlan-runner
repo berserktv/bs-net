@@ -6,3 +6,4 @@ cmd=$2
 # необходим для того, чтобы udev не прерывал скрипт по своему таймауту (30 сек)
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 /etc/network/wlan "$iface" "$cmd" &
+exit 0

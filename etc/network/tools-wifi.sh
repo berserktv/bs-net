@@ -3,12 +3,9 @@
 # скрипт предназначен для сканирования ближайших WiFi сетей утилитой "iw" 
 # и генерацию хеша паролей, командой wpa_passphrase
 # autor: "Alexander Demachev", project: "Berserk", site: https://berserk.tv
-# примечание: имена WiFi сетей в которых есть пробелы, не поддерживаются
-# так как такие имена вносят большее количество неодназначности
-# (например пробел в конце имени сети)
-#
 # license -  The MIT License (MIT)
 
+WLAN_REG="RU"
 WLAN_SCAN="/tmp/wifi.scan"
 
 check_pluged() {
@@ -19,6 +16,7 @@ check_pluged() {
 
 scan_wifi() {
     local wlan="$1"
+    iw reg set $WLAN_REG
     iw $wlan scan > $WLAN_SCAN
     if [ $? -ne 0 ]; then
         # ошибка выполнения команды
@@ -28,10 +26,12 @@ scan_wifi() {
     awk '
 /^BSS / {
     MAC = $2
+    FS=":"
 }
 /SSID/ {
     wifi[MAC]["SSID"] = $2
     wifi[MAC]["secure"] = "NOT"
+    FS=" "
 }
 /primary channel/ {
     wifi[MAC]["channel"] = $NF
