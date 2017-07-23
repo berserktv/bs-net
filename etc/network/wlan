@@ -163,7 +163,6 @@ wait_start_wifi_infrastructure_mode() {
 wifi_infrastructure_mode() {
     local cfg="$1"
     ifconfig $iface down
-    iw reg set $WPA_REG
     iwconfig $iface mode managed
     ifconfig $iface up
     iwconfig $iface txpower 20
@@ -222,11 +221,11 @@ if [ -f "$WLAN_CONFIGS/${iface}_off" ]; then logger -s -t wlan "wlan - ${iface} 
 
 
 test -d $WPA_DIR || mkdir -p $WPA_DIR
+iw reg set $WPA_REG
 logger -s -t wlan "Raising WiFi network, (script /etc/network/wlan $iface up)"
 if [ -f "$WPA_PID" ]; then 
     if wpa_supplicant_stop "$WPA_PID"; then  logger -s -t wlan "wpa-supplicant it is already running, stoping ..."; fi
 fi
-
 
 if wait_start_wifi_infrastructure_mode "30"; then
     dhclient_start "$dh_leases" "$iface" "wlan"
