@@ -1,5 +1,5 @@
 ACTION=="add" SUBSYSTEM=="block" KERNEL=="sd[a-z][0-9]" RUN+="/bin/mkdir -p /media/%k"
-ACTION=="add" SUBSYSTEM=="block" KERNEL=="sd[a-z][0-9]" RUN+="/bin/mount /dev/%k /media/%k"
+ACTION=="add" SUBSYSTEM=="block" KERNEL=="sd[a-z][0-9]" RUN+="/bin/mount -o iocharset=utf8 /dev/%k /media/%k"
 #ACTION=="add" SUBSYSTEM=="block" KERNEL=="sd[a-z][0-9]" RUN+="/bin/mount -o uid=1000 /dev/%k /media/%k"
 
 ACTION=="remove" SUBSYSTEM=="block" KERNEL=="sd[a-z][0-9]" RUN+="/bin/umount /media/%k"
