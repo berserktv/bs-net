@@ -1,6 +1,5 @@
-ACTION=="add" SUBSYSTEM=="block" KERNEL=="sd[a-z][0-9]" RUN+="/bin/mkdir -p /media/%k"
-ACTION=="add" SUBSYSTEM=="block" KERNEL=="sd[a-z][0-9]" RUN+="/bin/mount -o iocharset=utf8 /dev/%k /media/%k"
-#ACTION=="add" SUBSYSTEM=="block" KERNEL=="sd[a-z][0-9]" RUN+="/bin/mount -o uid=1000 /dev/%k /media/%k"
+ACTION=="add" SUBSYSTEM=="block"  ENV{ID_FS_TYPE}=="vfat" KERNEL=="sd[a-z][0-9]"  RUN+="/bin/mkdir -p /media/%k", RUN+="/bin/mount -o iocharset=utf8,noatime /dev/%k /media/%k"
+ACTION=="add" SUBSYSTEM=="block"  ENV{ID_FS_TYPE}=="ntfs" KERNEL=="sd[a-z][0-9]"  RUN+="/bin/mkdir -p /media/%k", RUN+="/usr/bin/ntfs-3g -o iocharset=utf8,noatime,windows_names /dev/%k /media/%k"
+ACTION=="add" SUBSYSTEM=="block"  ENV{ID_FS_TYPE}=="ext2|ext3|ext4" KERNEL=="sd[a-z][0-9]"  RUN+="/bin/mkdir -p /media/%k", RUN+="/bin/mount -o noatime /dev/%k /media/%k"
 
-ACTION=="remove" SUBSYSTEM=="block" KERNEL=="sd[a-z][0-9]" RUN+="/bin/umount /media/%k"
-ACTION=="remove" SUBSYSTEM=="block" KERNEL=="sd[a-z][0-9]" RUN+="/bin/rmdir /media/%k"
+ACTION=="remove" SUBSYSTEM=="block" KERNEL=="sd[a-z][0-9]" RUN+="/bin/umount /media/%k", RUN+="/bin/rmdir /media/%k"
