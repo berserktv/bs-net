@@ -74,8 +74,8 @@ ntp_stop() {
 ntp_start() {
     local logmark="$1"
     /etc/init.d/ntpd stop
-    logger -s -t $logmark "/usr/bin/ntpdate pool.ntp.org"
-    /usr/bin/ntpdate pool.ntp.org
+    logger -s -t $logmark "/usr/sbin/ntpdate pool.ntp.org"
+    /usr/sbin/ntpdate pool.ntp.org
     /etc/init.d/ntpd start
     logger -s -t $logmark "ntp_start"
 }
